@@ -17,6 +17,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 @Autonomous(name = "JSON Drive")
 public class json_drive extends LinearOpMode {
@@ -26,7 +28,8 @@ public class json_drive extends LinearOpMode {
 
     JSONArray logArray = new JSONArray();
 
-    double log_interval = 2.0;
+    double log_interval = 0.5;
+    double switch_interval = 2.0;
     double lastLog = 0;
 
     @Override
@@ -51,14 +54,15 @@ public class json_drive extends LinearOpMode {
 
         boolean forward = true;
 
+
         waitForStart();
 
         runtime.reset();
 
         double switchTime = 0;
 
-        while (opModeIsActive() && runtime.seconds() < 9) {
-            if (runtime.seconds() - switchTime >= 2) {
+        while (opModeIsActive() && runtime.seconds() < 6) {
+            if (runtime.seconds() - switchTime >= switch_interval) {
                 forward = !forward;
                 switchTime = runtime.seconds();
             }
@@ -77,23 +81,25 @@ public class json_drive extends LinearOpMode {
                     JSONObject bl = new JSONObject();
                     JSONObject br = new JSONObject();
 
-                    sample.put("time", runtime.seconds());
+                    long timestamp_ms = System.currentTimeMillis();
+                    sample.put("run time", runtime.seconds());
+                    sample.put("timestamp", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date(timestamp_ms)));
 
-                    fl.put("power", FrontLeft.getPower());
-                    fl.put("position", FrontLeft.getCurrentPosition());
-                    fl.put("current", FrontLeft.getCurrent(CurrentUnit.AMPS));
+                    fl.put("power", FrontLeft.getPower() * 1000.0 / 1000.0);
+                    //fl.put("position", FrontLeft.getCurrentPosition());
+                    fl.put("current", FrontLeft.getCurrent(CurrentUnit.AMPS) * 1000.0 / 1000.0);
 
-                    fr.put("power", FrontRight.getPower());
-                    fr.put("position", FrontRight.getCurrentPosition());
-                    fr.put("current", FrontRight.getCurrent(CurrentUnit.AMPS));
+                    fr.put("power", FrontRight.getPower() * 1000.0 / 1000.0);
+                    //fr.put("position", FrontRight.getCurrentPosition());
+                    fr.put("current", FrontRight.getCurrent(CurrentUnit.AMPS) * 1000.0 / 1000.0);
 
-                    bl.put("power", BackLeft.getPower());
-                    bl.put("position", BackLeft.getCurrentPosition());
-                    bl.put("current", BackLeft.getCurrent(CurrentUnit.AMPS));
+                    bl.put("power", BackLeft.getPower() * 1000.0 / 1000.0);
+                    //bl.put("position", BackLeft.getCurrentPosition());
+                    bl.put("current", BackLeft.getCurrent(CurrentUnit.AMPS) * 1000.0 / 1000.0);
 
-                    br.put("power", BackRight.getPower());
-                    br.put("position", BackRight.getCurrentPosition());
-                    br.put("current", BackRight.getCurrent(CurrentUnit.AMPS));
+                    br.put("power", BackRight.getPower() * 1000.0 / 1000.0);
+                    //br.put("position", BackRight.getCurrentPosition());
+                    br.put("current", BackRight.getCurrent(CurrentUnit.AMPS) * 1000.0 / 1000.0);
 
                     sample.put("FrontLeft", fl);
                     sample.put("FrontRight", fr);
@@ -118,61 +124,47 @@ public class json_drive extends LinearOpMode {
         BackRight.setPower(0);
 
         try {
-            //String path = Environment.getExternalStorageDirectory().getPath() + "/FIRST/drive_log.json";
-            String path = "/storage/emulated/0/Download/POKER.json";
+            String path = "/storage/emulated/0/Download/BLACKJACK.json";
 
             File file = new File(path);
-            //File file = new File(hardwareMap.appContext.getExternalFilesDir(null),
-            //        "drive_log.json");
+
+            JSONArray existingArray = new JSONArray();
+
+            if (file.exists() && file.length() > 0) {
+                try {
+                    BufferedReader reader = new BufferedReader(new FileReader(file));
+                    StringBuilder content = new StringBuilder();
+
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        content.append(line);
+                    }
+
+                    reader.close();
+
+                    existingArray = new JSONArray(content.toString());
+
+                } catch (Exception e) {
+                    telemetry.addLine("Old JSON invalid, starting new file");
+                }
+            }
+
+            for (int i = 0; i < logArray.length(); i++) {
+                existingArray.put(logArray.get(i));
+            }
 
             FileWriter writer = new FileWriter(file);
+            writer.write(existingArray.toString(4));
+            writer.close();
 
-            telemetry.addData("Samples", logArray.length());
-
-            sleep(500);
-
-            writer.write(logArray.toString(4));
-
-            writer.flush();
-            //writer.close();
-
-            BufferedReader reader = new BufferedReader(new FileReader(file));
-            String line;
-            StringBuilder content = new StringBuilder();
-
-            while ((line = reader.readLine()) != null) {
-                content.append(line);
-            }
-            reader.close();
-
-            /*
-            telemetry.addData("Exists", file.exists());
-            telemetry.addData("Length", file.length());
-            telemetry.addLine("Saved JSON file");
-            telemetry.addData("File Path", path);
-            telemetry.addData("Can Read", file.canRead());
-            telemetry.addData("Can Write", file.canWrite());
-            telemetry.addData("Parent Exists", file.getParentFile().exists());
-            telemetry.addData("Directory", file.getParentFile().list().length);
-            telemetry.addData("Parent path", file.getParentFile().getAbsolutePath());
-
-            File parent = file.getParentFile();
-            File[] files = parent.listFiles();
-
-            if (files != null) {
-                for (File f : files) {
-                    telemetry.addLine(f.getName());
-                }
-            }*/
-
-            telemetry.addData("File Content", content.toString());
-
+            telemetry.addData("File length", file.length());
+            telemetry.addData("New samples", logArray.length());
+            telemetry.addData("Existing samples", existingArray.length());
             telemetry.update();
-
-            sleep(18000);
+            sleep(5000);
 
         } catch (Exception e) {
-            telemetry.addLine("File save failed");
+            telemetry.addLine("Old JSON invalid, starting new file");
             telemetry.addData("Error", e.toString());
             telemetry.update();
 
