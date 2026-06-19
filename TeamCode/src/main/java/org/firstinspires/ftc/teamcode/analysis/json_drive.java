@@ -79,8 +79,7 @@ public class json_drive extends LinearOpMode {
 
             if (runtime.seconds() - lastLog >= log_interval) { // adding data samples into a json file
                 try {
-                    // create new JSON objects for each new data sample
-                    // fl, fr, bl, br contain data for each motor
+                    // create new JSON objects for each new data sample. fl, fr, bl, br contain data for each motor
                     JSONObject sample = new JSONObject();
                     JSONObject fl = new JSONObject();
                     JSONObject fr = new JSONObject();
@@ -91,21 +90,21 @@ public class json_drive extends LinearOpMode {
                     sample.put("run time", runtime.seconds()); // seconds since program started running
                     sample.put("timestamp", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date(timestamp_ms))); // converting timestamp_ms to date and time
 
-                    fl.put("power", FrontLeft.getPower() * 1000.0 / 1000.0);
+                    fl.put("power", Math.round(FrontLeft.getPower() * 1000.0) / 1000.0);
                     //fl.put("position", FrontLeft.getCurrentPosition());
-                    fl.put("current", FrontLeft.getCurrent(CurrentUnit.AMPS) * 1000.0 / 1000.0);
+                    fl.put("current", Math.round(FrontLeft.getCurrent(CurrentUnit.AMPS) * 1000.0) / 1000.0);
 
-                    fr.put("power", FrontRight.getPower() * 1000.0 / 1000.0);
+                    fr.put("power", Math.round(FrontRight.getPower() * 1000.0) / 1000.0);
                     //fr.put("position", FrontRight.getCurrentPosition());
-                    fr.put("current", FrontRight.getCurrent(CurrentUnit.AMPS) * 1000.0 / 1000.0);
+                    fr.put("current", Math.round(FrontRight.getCurrent(CurrentUnit.AMPS) * 1000.0) / 1000.0);
 
-                    bl.put("power", BackLeft.getPower() * 1000.0 / 1000.0);
+                    bl.put("power", Math.round(BackLeft.getPower() * 1000.0) / 1000.0);
                     //bl.put("position", BackLeft.getCurrentPosition());
-                    bl.put("current", BackLeft.getCurrent(CurrentUnit.AMPS) * 1000.0 / 1000.0);
+                    bl.put("current", Math.round(BackLeft.getCurrent(CurrentUnit.AMPS) * 1000.0) / 1000.0);
 
-                    br.put("power", BackRight.getPower() * 1000.0 / 1000.0);
+                    br.put("power", Math.round(BackRight.getPower() * 1000.0) / 1000.0);
                     //br.put("position", BackRight.getCurrentPosition());
-                    br.put("current", BackRight.getCurrent(CurrentUnit.AMPS) * 1000.0 / 1000.0);
+                    br.put("current", Math.round(BackRight.getCurrent(CurrentUnit.AMPS) * 1000.0) / 1000.0);
 
                     sample.put("FrontLeft", fl);
                     sample.put("FrontRight", fr);
