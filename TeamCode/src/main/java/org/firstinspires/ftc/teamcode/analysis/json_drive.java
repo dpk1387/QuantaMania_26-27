@@ -22,15 +22,17 @@ import java.util.Date;
 
 @Autonomous(name = "JSON Drive")
 public class json_drive extends LinearOpMode {
+    // set up variables and motors
+
     DcMotorEx FrontLeft, FrontRight, BackLeft, BackRight;
 
     ElapsedTime runtime = new ElapsedTime();
 
     JSONArray logArray = new JSONArray();
 
-    double log_interval = 0.5;
-    double switch_interval = 2.0;
-    double lastLog = 0;
+    double log_interval = 0.5; // time interval in seconds between collecting data points
+    double switch_interval = 2.0; // seconds between switching direction
+    double lastLog = 0; // time in seconds of last data collection
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -61,29 +63,33 @@ public class json_drive extends LinearOpMode {
 
         double switchTime = 0;
 
-        while (opModeIsActive() && runtime.seconds() < 6) {
+        while (opModeIsActive() && runtime.seconds() < 6) { // run robot for 6 seconds
+
+            // drives the robot foward and backward for fixed duration while collecting data about the motor current and power
             if (runtime.seconds() - switchTime >= switch_interval) {
                 forward = !forward;
                 switchTime = runtime.seconds();
             }
 
-            double power = forward ? 0.3 : -0.3;
+            double power = forward ? 0.3 : -0.3; // drive forward, then reverse after each switch interval
             FrontLeft.setPower(power);
             FrontRight.setPower(power);
             BackLeft.setPower(power);
             BackRight.setPower(power);
 
-            if (runtime.seconds() - lastLog >= log_interval) {
+            if (runtime.seconds() - lastLog >= log_interval) { // adding data samples into a json file
                 try {
+                    // create new JSON objects for each new data sample
+                    // fl, fr, bl, br contain data for each motor
                     JSONObject sample = new JSONObject();
                     JSONObject fl = new JSONObject();
                     JSONObject fr = new JSONObject();
                     JSONObject bl = new JSONObject();
                     JSONObject br = new JSONObject();
 
-                    long timestamp_ms = System.currentTimeMillis();
-                    sample.put("run time", runtime.seconds());
-                    sample.put("timestamp", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date(timestamp_ms)));
+                    long timestamp_ms = System.currentTimeMillis(); // milliseconds since January 1, 1970, midnight UTC
+                    sample.put("run time", runtime.seconds()); // seconds since program started running
+                    sample.put("timestamp", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date(timestamp_ms))); // converting timestamp_ms to date and time
 
                     fl.put("power", FrontLeft.getPower() * 1000.0 / 1000.0);
                     //fl.put("position", FrontLeft.getCurrentPosition());
@@ -106,9 +112,9 @@ public class json_drive extends LinearOpMode {
                     sample.put("BackLeft", bl);
                     sample.put("BackRight", br);
 
-                    logArray.put(sample);
+                    logArray.put(sample); // adding completed sample to the in-memory log
 
-                    lastLog = runtime.seconds();
+                    lastLog = runtime.seconds(); // update logging timer so next sample is collected after another log_interval seconds
 
                 } catch (JSONException e) {
                     telemetry.addLine("JSON Logging Error");
@@ -118,20 +124,23 @@ public class json_drive extends LinearOpMode {
             }
         }
 
+        // stop motors
         FrontLeft.setPower(0);
         FrontRight.setPower(0);
         BackLeft.setPower(0);
         BackRight.setPower(0);
 
         try {
-            String path = "/storage/emulated/0/Download/BLACKJACK.json";
+            String path = "/storage/emulated/0/Download/BLACKJACK.json"; // path of the json file
+            // this file exists on the control hub
 
             File file = new File(path);
 
-            JSONArray existingArray = new JSONArray();
+            JSONArray existingArray = new JSONArray(); // create a new json array
 
             if (file.exists() && file.length() > 0) {
                 try {
+                    // reads entire existing json file into memory so new samples can be appended with no invalid json
                     BufferedReader reader = new BufferedReader(new FileReader(file));
                     StringBuilder content = new StringBuilder();
 
@@ -149,10 +158,12 @@ public class json_drive extends LinearOpMode {
                 }
             }
 
+            // append samples from current run to the existing dataset
             for (int i = 0; i < logArray.length(); i++) {
                 existingArray.put(logArray.get(i));
             }
 
+            // rewrite the file with new combined dataset
             FileWriter writer = new FileWriter(file);
             writer.write(existingArray.toString(4));
             writer.close();
