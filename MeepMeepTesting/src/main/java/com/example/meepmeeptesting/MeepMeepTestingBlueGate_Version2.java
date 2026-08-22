@@ -1,4 +1,3 @@
-/*
 package com.example.meepmeeptesting;
 
 import com.acmerobotics.roadrunner.Pose2d;
@@ -7,7 +6,7 @@ import com.noahbres.meepmeep.MeepMeep;
 import com.noahbres.meepmeep.roadrunner.DefaultBotBuilder;
 import com.noahbres.meepmeep.roadrunner.entity.RoadRunnerBotEntity;
 
-public class MeepMeepTestingBlueGATE_Version2 {
+public class MeepMeepTestingBlueGate_Version2 {
     public static void main(String[] args) {
         MeepMeep meepMeep = new MeepMeep(800);
 
@@ -103,4 +102,4 @@ public class MeepMeepTestingBlueGATE_Version2 {
                 .addEntity(myBot)
                 .start();
     }
-}*/
+}
