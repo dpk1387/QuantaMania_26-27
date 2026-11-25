@@ -146,7 +146,7 @@ public class RobotAutoDriveToAprilTagTank extends LinearOpMode
 
             // Step through the list of detected tags and look for a matching tag
             List<AprilTagDetection> currentDetections = aprilTag.getDetections();
-            for (AprilTagDetection detection : currentDetections) {
+            /*for (AprilTagDetection detection : currentDetections) {
                 // Look to see if we have size info on this tag.
                 if (detection.metadata != null) {
                     //  Check to see if we want to track towards this tag.
@@ -173,7 +173,7 @@ public class RobotAutoDriveToAprilTagTank extends LinearOpMode
                 telemetry.addData("Bearing","%3.0f degrees", desiredTag.ftcPose.bearing);
             } else {
                 telemetry.addData("\n>","Drive using joysticks to find valid target\n");
-            }
+            }*/
 
             // If Left Bumper is being pressed, AND we have found the desired target, Drive to target Automatically .
             if (gamepad1.left_bumper && targetFound) {

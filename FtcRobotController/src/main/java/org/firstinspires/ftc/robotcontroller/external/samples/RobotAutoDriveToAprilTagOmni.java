@@ -156,7 +156,7 @@ public class RobotAutoDriveToAprilTagOmni extends LinearOpMode
 
             // Step through the list of detected tags and look for a matching tag
             List<AprilTagDetection> currentDetections = aprilTag.getDetections();
-            for (AprilTagDetection detection : currentDetections) {
+            /*for (AprilTagDetection detection : currentDetections) {
                 // Look to see if we have size info on this tag.
                 if (detection.metadata != null) {
                     //  Check to see if we want to track towards this tag.
@@ -173,10 +173,10 @@ public class RobotAutoDriveToAprilTagOmni extends LinearOpMode
                     // This tag is NOT in the library, so we don't have enough information to track to it.
                     telemetry.addData("Unknown", "Tag ID %d is not in TagLibrary", detection.id);
                 }
-            }
+            }*/
 
             // Tell the driver what we see, and what to do.
-            if (targetFound) {
+            /*if (targetFound) {
                 telemetry.addData("\n>","HOLD Left-Bumper to Drive to Target\n");
                 telemetry.addData("Found", "ID %d (%s)", desiredTag.id, desiredTag.metadata.name);
                 telemetry.addData("Range",  "%5.1f inches", desiredTag.ftcPose.range);
@@ -184,7 +184,7 @@ public class RobotAutoDriveToAprilTagOmni extends LinearOpMode
                 telemetry.addData("Yaw","%3.0f degrees", desiredTag.ftcPose.yaw);
             } else {
                 telemetry.addData("\n>","Drive using joysticks to find valid target\n");
-            }
+            }*/
 
             // If Left Bumper is being pressed, AND we have found the desired target, Drive to target Automatically .
             if (gamepad1.left_bumper && targetFound) {

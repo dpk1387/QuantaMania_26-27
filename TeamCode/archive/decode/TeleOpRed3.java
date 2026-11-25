@@ -96,23 +96,22 @@ import java.util.concurrent.TimeUnit;
  * V6 - Add Intake
  */
 
-@TeleOp(name="TeleOp Red 3", group = "Concept")
+@TeleOp(name = "TeleOp Red 3", group = "Concept")
 @Disabled
-public class TeleOpRed3 extends LinearOpMode
-{
+public class TeleOpRed3 extends LinearOpMode {
     // Adjust these numbers to suit your robot. Should be from 30 - 55 inches
     final double DESIRED_DISTANCE = 40;//35;//45;//12.0; //  this is how close the camera should get to the target (inches)
 
     //  Set the GAIN constants to control the relationship between the measured position error, and how much power is
     //  applied to the drive motors to correct the error.
     //  Drive = Error * Gain    Make these values smaller for smoother control, or larger for a more aggressive response.
-    final double SPEED_GAIN  =  0.10;//0.2;//0.4;//0.02  ;   //  Forward Speed Control "Gain". e.g. Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
+    final double SPEED_GAIN = 0.10;//0.2;//0.4;//0.02  ;   //  Forward Speed Control "Gain". e.g. Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
     final double STRAFE_GAIN = 0.03;//0.06; //0.03;//0.015 ;   //  Strafe Speed Control "Gain".  e.g. Ramp up to 37% power at a 25 degree Yaw error.   (0.375 / 25.0)
-    final double TURN_GAIN   = 0.03;// 0.03;//0.04;//0.02  ;   //  Turn Control "Gain".  e.g. Ramp up to 25% power at a 25 degree error. (0.25 / 25.0)
+    final double TURN_GAIN = 0.03;// 0.03;//0.04;//0.02  ;   //  Turn Control "Gain".  e.g. Ramp up to 25% power at a 25 degree error. (0.25 / 25.0)
 
     final double MAX_AUTO_SPEED = 0.9;   //  Clip the approach speed to this max value (adjust for your robot)
-    final double MAX_AUTO_STRAFE= 0.9;   //  Clip the strafing speed to this max value (adjust for your robot)
-    final double MAX_AUTO_TURN  = 0.9;   //  Clip the turn speed to this max value (adjust for your robot)
+    final double MAX_AUTO_STRAFE = 0.9;   //  Clip the strafing speed to this max value (adjust for your robot)
+    final double MAX_AUTO_TURN = 0.9;   //  Clip the turn speed to this max value (adjust for your robot)
 
     private DcMotor frontLeftDrive = null;  //  Used to control the left front drive wheel
     private DcMotor frontRightDrive = null;  //  Used to control the right front drive wheel
@@ -132,7 +131,7 @@ public class TeleOpRed3 extends LinearOpMode
     //final private double CAMERASERVO_LOW = 0.68;
     private double SHOOTER_VELOCITY = 2500;//4800;//5000;
 
-    final private double SHOOTER_GEAR_RATIO = 17.0/18.0; //bottom / top
+    final private double SHOOTER_GEAR_RATIO = 17.0 / 18.0; //bottom / top
 
     boolean intakeMode = false;
     private static final boolean USE_WEBCAM = true;  // Set true to use a webcam, or false for a phone camera
@@ -146,20 +145,22 @@ public class TeleOpRed3 extends LinearOpMode
     private YawPitchRollAngles cameraOrientation = new YawPitchRollAngles(AngleUnit.DEGREES,
             0, -75, 0, 0);//-90
     GoBildaPinpointDriver pinpoint;
+
     ///
-    enum LbState { IDLE, ALIGN, TRANSLATE }
+    enum LbState {IDLE, ALIGN, TRANSLATE}
+
     private LbState lbState = LbState.IDLE;
     private int yawStableCount = 0;
     ///
     private ColorBlobLocatorProcessor colorLocator;
     //obstacle avoidance
     private double rangeError = 0; //desiredTag.ftcPose.range;
-    private double headingError =0 ;// desiredTag.ftcPose.bearing;
+    private double headingError = 0;// desiredTag.ftcPose.bearing;
     private double yawError = 0; //= desiredTag.ftcPose.yaw;
 
 
-    @Override public void runOpMode()
-    {
+    @Override
+    public void runOpMode() {
         /*MORE PARAMETER SETTINGS*/
         //desired shoot location, when tag view is not available - ie. robot will blindly aim to return to this location
         double desired_x, desired_y, desired_yaw; // FIELD: x=right, y=forward, deg (0°=+Y)
@@ -169,20 +170,28 @@ public class TeleOpRed3 extends LinearOpMode
         if (DESIRED_TAG_ID == 24) {
             //desired_x = -30; desired_y =  30; desired_yaw =  45;
             //shoot close
-            desired_x = -23; desired_y = 23; desired_yaw =  135; //corresponding to DESIRED DISTANCE 50 -- NEED TO CHeck the yaw
+            desired_x = -23;
+            desired_y = 23;
+            desired_yaw = 135; //corresponding to DESIRED DISTANCE 50 -- NEED TO CHeck the yaw
             //clear classifier
-            latch_x = 8; latch_y = 66; latch_yaw = 120; //0, 50, 90
+            latch_x = 8;
+            latch_y = 66;
+            latch_yaw = 120; //0, 50, 90
             //parking position
-            park_x = 38.5; park_y = -35; park_yaw = 90;
+            park_x = 38.5;
+            park_y = -35;
+            park_yaw = 90;
             //shooting from far
-            far_x = 48; far_y = 0; far_yaw = 150; //far shooting locations
+            far_x = 48;
+            far_y = 0;
+            far_yaw = 150; //far shooting locations
             //yaw okay around 155, just a little close to the left side of the goal
         }
 
-        boolean targetFound     = false;    // Set to true when an AprilTag target is detected
-        double  drive           = 0;        // Desired forward power/speed (-1 to +1)
-        double  strafe          = 0;        // Desired strafe power/speed (-1 to +1)
-        double  turn            = 0;        // Desired turning power/speed (-1 to +1)
+        boolean targetFound = false;    // Set to true when an AprilTag target is detected
+        double drive = 0;        // Desired forward power/speed (-1 to +1)
+        double strafe = 0;        // Desired strafe power/speed (-1 to +1)
+        double turn = 0;        // Desired turning power/speed (-1 to +1)
 
         double stage1_power = 0.8;//0.5
         double stage3_power = 0.3;
@@ -204,7 +213,7 @@ public class TeleOpRed3 extends LinearOpMode
 
         waitForStart();
         boolean aprilTagMode = false;
-        boolean blobMode     = false;
+        boolean blobMode = false;
 
         blockShooter.setPosition(OPENSHOOTER_CLOSED);
         boolean lastYState = false;  // The previous state of the Y button
@@ -215,8 +224,7 @@ public class TeleOpRed3 extends LinearOpMode
         //double pos= CAMERASERVO_LOW;//TEST
 
         shootVelocity(SHOOTER_VELOCITY);
-        while (opModeIsActive())
-        {
+        while (opModeIsActive()) {
             telemetry.addData("velocity (top)", shooter2.getVelocity());
             telemetry.addData("velocity (bottom)", shooter.getVelocity());
             pinpoint.update();
@@ -242,7 +250,7 @@ public class TeleOpRed3 extends LinearOpMode
             }
 
             targetFound = false;
-            desiredTag  = null;
+            desiredTag = null;
             // Step through the list of detected tags and look for a matching tag
             List<AprilTagDetection> currentDetections = aprilTag.getDetections();
             for (AprilTagDetection detection : currentDetections) {
@@ -253,7 +261,7 @@ public class TeleOpRed3 extends LinearOpMode
                         targetFound = true;                         // Yes, we want to use this tag.
                         desiredTag = detection;
                         break;  // don't look any further.
-                    }else {
+                    } else {
                         telemetry.addData("Skipping", "Tag ID %d is not desired", detection.id);
                         desiredTag = null;
                     }
@@ -262,12 +270,12 @@ public class TeleOpRed3 extends LinearOpMode
 
             // Tell the driver what we see, and what to do.
             if (targetFound) { //if AprilTag visible
-                telemetry.addData("\n>","HOLD Left-Bumper to Drive to Target\n");
+                telemetry.addData("\n>", "HOLD Left-Bumper to Drive to Target\n");
                 telemetry.addData("Found", "ID %d (%s)", desiredTag.id, desiredTag.metadata.name);
-                telemetry.addData("Range",  "%5.1f inches", desiredTag.ftcPose.range);
-                telemetry.addData("Bearing","%3.0f degrees", desiredTag.ftcPose.bearing);
-                telemetry.addData("Yaw","%3.0f degrees", desiredTag.ftcPose.yaw);
-                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", desiredTag.robotPose.getPosition().x, desiredTag.robotPose.getPosition().y,desiredTag.robotPose.getPosition().z));
+                telemetry.addData("Range", "%5.1f inches", desiredTag.ftcPose.range);
+                telemetry.addData("Bearing", "%3.0f degrees", desiredTag.ftcPose.bearing);
+                telemetry.addData("Yaw", "%3.0f degrees", desiredTag.ftcPose.yaw);
+                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", desiredTag.robotPose.getPosition().x, desiredTag.robotPose.getPosition().y, desiredTag.robotPose.getPosition().z));
 
                 telemetry.addData("yawError", yawError);
                 telemetry.addData("headingError", headingError);
@@ -276,35 +284,35 @@ public class TeleOpRed3 extends LinearOpMode
 
                 // --- Continuous Pinpoint update from AprilTag (always, not just during auto) ---
                 // Only update when tag detection is confident: close enough and reasonably aligned
-                double tagYaw   = desiredTag.ftcPose.yaw;
+                double tagYaw = desiredTag.ftcPose.yaw;
                 double tagRange = desiredTag.ftcPose.range;
-                final double TAG_UPDATE_MAX_RANGE   = 80.0;  // inches — tag too far = less accurate
+                final double TAG_UPDATE_MAX_RANGE = 80.0;  // inches — tag too far = less accurate
                 final double TAG_UPDATE_MAX_YAW_DEG = 25.0;  // degrees — too oblique = less accurate
                 if (tagRange < TAG_UPDATE_MAX_RANGE && Math.abs(tagYaw) < TAG_UPDATE_MAX_YAW_DEG) {
                     Position rp = desiredTag.robotPose.getPosition();
                     YawPitchRollAngles ro = desiredTag.robotPose.getOrientation();
-                    double x_fwd  = fieldX_to_pfwd(rp.x, rp.y);
+                    double x_fwd = fieldX_to_pfwd(rp.x, rp.y);
                     double y_left = fieldY_to_pleft(rp.x, rp.y);
-                    double h_rr   = ro.getYaw(AngleUnit.DEGREES);
+                    double h_rr = ro.getYaw(AngleUnit.DEGREES);
                     pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, x_fwd, y_left, AngleUnit.DEGREES, h_rr));
                     telemetry.addData("Pinpoint updated from tag", "range=%.1f yaw=%.1f", tagRange, tagYaw);
                 }
             } else {
-                telemetry.addData("\n>","Drive using joysticks to find valid target\n");
+                telemetry.addData("\n>", "Drive using joysticks to find valid target\n");
             }
             /**************************************************************************************/
             // Always reset drive commands each loop — prevents stale auto values bleeding into manual
-            drive  = 0;
+            drive = 0;
             strafe = 0;
-            turn   = 0;
+            turn = 0;
 
             // Deadzone threshold - prevents tiny residual joystick values from moving robot
             // Raised to 0.10 to absorb stick drift after impact/vibration
             final double STICK_DEADZONE = 0.10;
-            double rawFwd  = -gamepad1.left_stick_y;
+            double rawFwd = -gamepad1.left_stick_y;
             double rawLeft = -gamepad1.left_stick_x;
             double rawTurn = -gamepad1.right_stick_x;
-            boolean driverOverride = (Math.abs(rawFwd)  > STICK_DEADZONE ||
+            boolean driverOverride = (Math.abs(rawFwd) > STICK_DEADZONE ||
                     Math.abs(rawLeft) > STICK_DEADZONE ||
                     Math.abs(rawTurn) > STICK_DEADZONE);
             // Log raw joystick values to help diagnose stick drift incidents
@@ -315,24 +323,25 @@ public class TeleOpRed3 extends LinearOpMode
             if (!driverOverride && gamepad1.left_bumper) {
                 if (targetFound) {
                     //range of homing + AprilTag
-                    final double[] yawRange = new double[] {0,15};// 0, 25degrees
-                    final double[] distanceRange = new double[] {60-3,70/*65*/}; //50, 55 //45, 65 inches
+                    final double[] yawRange = new double[]{0, 15};// 0, 25degrees
+                    final double[] distanceRange = new double[]{60 - 3, 70/*65*/}; //50, 55 //45, 65 inches
                     // Determine heading, range and Yaw (tag image rotation) error so we can use them to control the robot automatically.
-                    rangeError   = (desiredTag.ftcPose.range);
+                    rangeError = (desiredTag.ftcPose.range);
                     headingError = desiredTag.ftcPose.bearing;
-                    yawError     = desiredTag.ftcPose.yaw;
+                    yawError = desiredTag.ftcPose.yaw;
                     // Use the speed and turn "gains" to calculate how we want the robot to move.
 
                     //stop driving if in range
-                    if ((rangeError>distanceRange[0] && rangeError<distanceRange[1])) {
+                    if ((rangeError > distanceRange[0] && rangeError < distanceRange[1])) {
                         drive = 0;
-                    } else drive   = Range.clip((rangeError - (distanceRange[0] + distanceRange[1])/2)*SPEED_GAIN, -MAX_AUTO_SPEED, MAX_AUTO_SPEED);
+                    } else
+                        drive = Range.clip((rangeError - (distanceRange[0] + distanceRange[1]) / 2) * SPEED_GAIN, -MAX_AUTO_SPEED, MAX_AUTO_SPEED);
 
                     turn = Range.clip(headingError * TURN_GAIN, -MAX_AUTO_TURN, MAX_AUTO_TURN);
 
                     //angle flexibility
-                    if (!(yawError>yawRange[0] && yawError<yawRange[1])) {
-                        strafe = Range.clip(-(yawError - (yawRange[0] + yawRange[1])/2) * STRAFE_GAIN, -MAX_AUTO_STRAFE, MAX_AUTO_STRAFE);
+                    if (!(yawError > yawRange[0] && yawError < yawRange[1])) {
+                        strafe = Range.clip(-(yawError - (yawRange[0] + yawRange[1]) / 2) * STRAFE_GAIN, -MAX_AUTO_STRAFE, MAX_AUTO_STRAFE);
                     } else strafe = 0;
 
                     telemetry.addData("Auto", "Drive %5.2f, Strafe %5.2f, Turn %5.2f ", drive, strafe, turn);
@@ -342,15 +351,15 @@ public class TeleOpRed3 extends LinearOpMode
                         // update the position according to localization, based on tag -- this is field coordinate
                         Position rp = desiredTag.robotPose.getPosition();
                         YawPitchRollAngles ro = desiredTag.robotPose.getOrientation();
-                        double x_fwd    = fieldX_to_pfwd(rp.x, rp.y);
-                        double y_left   = fieldY_to_pleft(rp.x, rp.y);
-                        double h_rr     = ro.getYaw(AngleUnit.DEGREES); // field convention matches Pinpoint native storage
+                        double x_fwd = fieldX_to_pfwd(rp.x, rp.y);
+                        double y_left = fieldY_to_pleft(rp.x, rp.y);
+                        double h_rr = ro.getYaw(AngleUnit.DEGREES); // field convention matches Pinpoint native storage
                         pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, x_fwd, y_left, AngleUnit.DEGREES, h_rr));
                         telemetry.addData("UPDATE pinpoint from", "rp_x %5.2f, rp_y %5.2f, ro_yaw %5.2f ", rp.x, rp.y, ro.getYaw(AngleUnit.DEGREES));
                     }
                 } else {
                     // if left bumper is pressed, but no tag in sight -- then move according to localization
-                    DriveCommand cmd = drivePinpoint( desired_x, desired_y, desired_yaw); //result always valid
+                    DriveCommand cmd = drivePinpoint(desired_x, desired_y, desired_yaw); //result always valid
                     drive = cmd.drive;
                     strafe = cmd.strafe;
                     turn = cmd.turn;
@@ -374,9 +383,9 @@ public class TeleOpRed3 extends LinearOpMode
                 yawStableCount = 0;
 
                 // Apply deadzone to raw joystick values
-                double joyFwd  = (Math.abs(rawFwd)  > STICK_DEADZONE ? rawFwd  : 0.0) / 1.5;
+                double joyFwd = (Math.abs(rawFwd) > STICK_DEADZONE ? rawFwd : 0.0) / 1.5;
                 double joyLeft = (Math.abs(rawLeft) > STICK_DEADZONE ? rawLeft : 0.0) / 1.5;
-                turn           = (Math.abs(rawTurn) > STICK_DEADZONE ? rawTurn : 0.0) / 2.0;
+                turn = (Math.abs(rawTurn) > STICK_DEADZONE ? rawTurn : 0.0) / 2.0;
 
                 // --- Field Centric Manual Drive ---
                 // Heading already read from pinpoint.update() at top of loop - reuse p
@@ -384,32 +393,36 @@ public class TeleOpRed3 extends LinearOpMode
 
                 // Rotate field-frame joystick into robot frame.
                 // Standard 2D rotation: robot_vec = R(-botHeading) * field_vec
-                double fwdRobot  =  joyFwd  * Math.cos(botHeading) + joyLeft * Math.sin(botHeading);
-                double leftRobot = -joyFwd  * Math.sin(botHeading) + joyLeft * Math.cos(botHeading);
+                double fwdRobot = joyFwd * Math.cos(botHeading) + joyLeft * Math.sin(botHeading);
+                double leftRobot = -joyFwd * Math.sin(botHeading) + joyLeft * Math.cos(botHeading);
 
-                drive  = fwdRobot;
+                drive = fwdRobot;
                 strafe = leftRobot;
                 telemetry.addData("Manual", "Drive %5.2f, Strafe %5.2f, Turn %5.2f", drive, strafe, turn);
             }
             telemetry.addData("shooter gate position", blockShooter.getPosition());
             telemetry.update();
 
-            if (gamepad2.left_bumper && !shooting){
+            if (gamepad2.left_bumper && !shooting) {
                 moveRobot(0, 0, 0); // stop drive motors before shooting sequence
                 shootBasedOnDistance();
                 // Reset drive commands — they were computed before this blocking call
                 // and would otherwise be re-applied to moveRobot below
-                drive = 0; strafe = 0; turn = 0;
+                drive = 0;
+                strafe = 0;
+                turn = 0;
                 moveRobot(0, 0, 0);
                 shooting = false;
             }
 
-            if (gamepad2.right_bumper && !shooting){
+            if (gamepad2.right_bumper && !shooting) {
                 moveRobot(0, 0, 0); // stop drive motors before shooting sequence
                 shootBasedOnDistance();
                 // Reset drive commands — they were computed before this blocking call
                 // and would otherwise be re-applied to moveRobot below
-                drive = 0; strafe = 0; turn = 0;
+                drive = 0;
+                strafe = 0;
+                turn = 0;
                 moveRobot(0, 0, 0);
                 shooting = false;
             }
@@ -428,7 +441,7 @@ public class TeleOpRed3 extends LinearOpMode
     public void shoot(int totalMs) {
         moveRobot(0, 0, 0); // stops robot in place
         double targetVel = SHOOTER_VELOCITY; //close = 2200. far = 2500.   // same units you use in setVelocity/getVelocity
-        final double recoverMargin = 100+100; //100;      // tune (smaller than dropMargin)
+        final double recoverMargin = 100 + 100; //100;      // tune (smaller than dropMargin)
         final double stage3FeedPower = 0.6; //0.6 // tune down if multiple balls sneak
         final double stage3HoldPower = 0.0;
 
@@ -451,7 +464,7 @@ public class TeleOpRed3 extends LinearOpMode
         boolean high = true;
         //1500 - stabilize Ms
 
-        while(time_pass.milliseconds() <= 1000 ){
+        while (time_pass.milliseconds() <= 1000) {
 
             stage3.setPower(stage3FeedPower);
             blockShooter.setPosition(GATE_PULSE_OPEN);
@@ -479,6 +492,7 @@ public class TeleOpRed3 extends LinearOpMode
 //        shooter.setVelocity(0);
         intakeMode = true;
     }
+
     //calculate how much vel based on distance
     public double distanceToVel(double d) {
         // Convert from distance to velocity in a linear manner
@@ -491,7 +505,7 @@ public class TeleOpRed3 extends LinearOpMode
         if (d <= DMIN) {
             return VEL_MIN;
         }
-        if (d >= DMAX){
+        if (d >= DMAX) {
             return VEL_MAX;
         }
 
@@ -502,6 +516,7 @@ public class TeleOpRed3 extends LinearOpMode
 
         return vel;
     }
+
     public void shootBasedOnDistance() {
         /*
         1. read camera distance + pose
@@ -521,17 +536,17 @@ public class TeleOpRed3 extends LinearOpMode
             targetVel = distanceToVel(rangeError);
         }
         /**SHOOTING**/
-        double    stage3FeedPower = 0.4;
-        double    lowRecoverMargin = 100; //100;
-        long      loopSleepMs = 15;
-        double    totalShootingTime = 1500 -600;//1000 - 300; //1000-200
-        long      pulseMs = 250; //250
+        double stage3FeedPower = 0.4;
+        double lowRecoverMargin = 100; //100;
+        long loopSleepMs = 15;
+        double totalShootingTime = 1500 - 600;//1000 - 300; //1000-200
+        long pulseMs = 250; //250
         // ADJUST THE Stage3 power manually
         //*
         pinpoint.update();
         Pose2D p = pinpoint.getPosition();
         double cur_left = p.getY(DistanceUnit.INCH);           // +Y left
-        if (cur_left < -23){
+        if (cur_left < -23) {
             stage3FeedPower = 0.2;
             lowRecoverMargin = 200;
             runIntake(1.0, 0.2);
@@ -547,7 +562,7 @@ public class TeleOpRed3 extends LinearOpMode
 
         ElapsedTime time_pass = new ElapsedTime();
         time_pass.reset();
-        while(time_pass.milliseconds() <= totalShootingTime){
+        while (time_pass.milliseconds() <= totalShootingTime) {
             //wait for shooter to reach speed — with timeout so a stalled/slow motor can't lock forever
             ElapsedTime spinUpTimer = new ElapsedTime();
             final double SPINUP_TIMEOUT_MS = 2000; // if not up to speed in 2s, shoot anyway
@@ -567,6 +582,7 @@ public class TeleOpRed3 extends LinearOpMode
         blockShooter.setPosition(OPENSHOOTER_CLOSED);
         runIntake(0.8, 0.4);
     }
+
     /**
      * Quick turn-to-yaw using AprilTag. Assumes tag is usually visible.
      * If tag is not seen at any iteration, this function exits immediately (so you can move on).
@@ -600,9 +616,9 @@ public class TeleOpRed3 extends LinearOpMode
                 return false;
             }
             //recalculate errors
-            rangeError   = desiredTag.ftcPose.range;
+            rangeError = desiredTag.ftcPose.range;
             headingError = desiredTag.ftcPose.bearing;
-            yawError     = desiredTag.ftcPose.yaw;
+            yawError = desiredTag.ftcPose.yaw;
             // Done, permission to shoot now
             if (Math.abs(headingError) <= TOLERANCE_DEG) {
                 setTurnPower(0.0);
@@ -624,21 +640,25 @@ public class TeleOpRed3 extends LinearOpMode
         setTurnPower(0.0);
         return false;
     }
-    /** In-place turn motor powers. If direction is wrong, flip signs. */
+
+    /**
+     * In-place turn motor powers. If direction is wrong, flip signs.
+     */
     private void setTurnPower(double turnPower) {
         frontLeftDrive.setPower(-turnPower);
         backLeftDrive.setPower(-turnPower);
         frontRightDrive.setPower(turnPower);
         backRightDrive.setPower(turnPower);
     }
+
     // drive = forward (+1 = forward), strafe = lateral (+1 = left), yaw = rotation (+1 = CCW)
     public void moveRobot(double drive, double strafe, double yaw) {
         //mecanum drive
         // Calculate wheel powers.
-        double frontLeftPower    =  drive - strafe - yaw;
-        double frontRightPower   =  drive + strafe + yaw;
-        double backLeftPower     =  drive + strafe - yaw;
-        double backRightPower    =  drive - strafe + yaw;
+        double frontLeftPower = drive - strafe - yaw;
+        double frontRightPower = drive + strafe + yaw;
+        double backLeftPower = drive + strafe - yaw;
+        double backRightPower = drive - strafe + yaw;
 
         // Normalize wheel powers to be less than 1.0
         double max = Math.max(Math.abs(frontLeftPower), Math.abs(frontRightPower));
@@ -658,8 +678,9 @@ public class TeleOpRed3 extends LinearOpMode
         backLeftDrive.setPower(backLeftPower);
         backRightDrive.setPower(backRightPower);
     }
+
     //Init motors
-    private void initDriveMotors(){
+    private void initDriveMotors() {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must match the names assigned during the robot configuration.
         // step (using the FTC Robot Controller app on the phone).
@@ -705,6 +726,7 @@ public class TeleOpRed3 extends LinearOpMode
         shooter2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
     }
+
     //Initialize the AprilTag processor.
     private void initAprilTagAndColorBlob() {
         /******************************************************************************************/
@@ -817,8 +839,9 @@ public class TeleOpRed3 extends LinearOpMode
                     .build();
         }
     }
+
     /*Manually set the camera gain and exposure.  This can only be called AFTER calling initAprilTag(), and only works for Webcams; */
-    private void  setManualExposure(int exposureMS, int gain) {
+    private void setManualExposure(int exposureMS, int gain) {
         // Wait for the camera to be open, then use the controls
 
         if (visionPortal == null) {
@@ -837,20 +860,20 @@ public class TeleOpRed3 extends LinearOpMode
         }
 
         // Set camera controls unless we are stopping.
-        if (!isStopRequested())
-        {
+        if (!isStopRequested()) {
             ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
             if (exposureControl.getMode() != ExposureControl.Mode.Manual) {
                 exposureControl.setMode(ExposureControl.Mode.Manual);
                 sleep(50);
             }
-            exposureControl.setExposure((long)exposureMS, TimeUnit.MILLISECONDS);
+            exposureControl.setExposure((long) exposureMS, TimeUnit.MILLISECONDS);
             sleep(20);
             GainControl gainControl = visionPortal.getCameraControl(GainControl.class);
             gainControl.setGain(gain);
             sleep(20);
         }
     }
+
     private void setBlobExposureAuto() {
         if (visionPortal == null) return;
 
@@ -866,6 +889,7 @@ public class TeleOpRed3 extends LinearOpMode
         // Optional: some drivers like to cap gain to reduce noise, if supported
         // if (gainControl != null) { gainControl.setGain(someMaxValue); }
     }
+
     public void initPinpoint() {
         // Get a reference to the sensor
         pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
@@ -874,7 +898,8 @@ public class TeleOpRed3 extends LinearOpMode
         // Set the location of the robot - this should be the place you are starting the robot from
         pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
     }
-    public void configurePinpoint(){
+
+    public void configurePinpoint() {
         /*
          *  Set the odometry pod positions relative to the point that you want the position to be measured from.
          *
@@ -916,20 +941,29 @@ public class TeleOpRed3 extends LinearOpMode
          */
         pinpoint.resetPosAndIMU();
     }
+
     /**************************************************************************************/
     // HELPER
     // Field (X right, Y fwd, 0° = +Y)  ->  Pinpoint/RR (X fwd, Y left, 0° = +X)
-    static double fieldX_to_pfwd(double x_field, double y_field) { return y_field; }   // forward
-    static double fieldY_to_pleft(double x_field, double y_field) { return -x_field; } // left
+    static double fieldX_to_pfwd(double x_field, double y_field) {
+        return y_field;
+    }   // forward
+
+    static double fieldY_to_pleft(double x_field, double y_field) {
+        return -x_field;
+    } // left
+
     static double heading_field_to_rr(double heading_field_deg) {  // wrap to (-180,180]
         return wrapDeg(heading_field_deg - 90.0);
         //return heading_field_deg;
     }
+
     static double wrapDeg(double a) {
         a = (a + 180.0) % 360.0;
         if (a < 0) a += 360.0;
         return a - 180.0;
     }
+
     // BLOB related
     // Put this inside your OpMode class (but outside any methods)
     private static class DriveCommand {
@@ -937,17 +971,19 @@ public class TeleOpRed3 extends LinearOpMode
         public final double strafe;
         public final double turn;
         public final boolean validBlob;
+
         public DriveCommand(double drive, double strafe, double turn, boolean v) {
-            this.drive  = drive;
+            this.drive = drive;
             this.strafe = strafe;
-            this.turn   = turn;
+            this.turn = turn;
             this.validBlob = v;
         }
     }
-    private DriveCommand drivePinpoint(double desired_x, double desired_y, double desired_yaw){
-        double  drive           = 0;        // Desired forward power/speed (-1 to +1)
-        double  strafe          = 0;        // Desired strafe power/speed (-1 to +1)
-        double  turn            = 0;        // Desired turning power/speed (-1 to +1)
+
+    private DriveCommand drivePinpoint(double desired_x, double desired_y, double desired_yaw) {
+        double drive = 0;        // Desired forward power/speed (-1 to +1)
+        double strafe = 0;        // Desired strafe power/speed (-1 to +1)
+        double turn = 0;        // Desired turning power/speed (-1 to +1)
 
         double goal_fwd = fieldX_to_pfwd(desired_x, desired_y);   // = y_field
         double goal_left = fieldY_to_pleft(desired_x, desired_y);  // = -x_field
@@ -1071,13 +1107,15 @@ public class TeleOpRed3 extends LinearOpMode
         }
     }
     */
+
     /**************************************************************************************/
     //INTAKE
-    public void runIntake(double stage1_power, double stage3_power){
+    public void runIntake(double stage1_power, double stage3_power) {
         stage1.setPower(stage1_power);
         stage3.setPower(stage3_power);
     }
-    public void shootVelocity(double base){   //run shooters with gear ratio
+
+    public void shootVelocity(double base) {   //run shooters with gear ratio
         shooter.setVelocity(base);
         shooter2.setVelocity((double) (base * SHOOTER_GEAR_RATIO));
     }
