@@ -17,7 +17,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagLibrary;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.List; //used to store lists of detections
-
+//int num = 0;
 @TeleOp //marks program as teleop
 @Disabled
 public class AprilTag extends LinearOpMode {
